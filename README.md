@@ -8,7 +8,7 @@ Inspired by:
 Generates analog signals via a low-pass filter of PWM output.
 Clock can be advanced by a push button. 
 
-![Schematic](https://octodex.github.com/images/yaktocat.png)
+![Schematic](https://github.com/daveyburke/Oscilloscope-Clock/blob/master/Schematic.jpg)
 
 DELAY may need to be tuned for your scope. Mine is a Tektronix TBS 1202B-EDU
 
