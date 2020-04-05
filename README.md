@@ -2,7 +2,7 @@
 Arduino-based analog clock drawn on an oscilloscope in X-Y mode
 
 Inspired by:
-   https://neil.fraser.name/news/2018/clock.html 
+   https://neil.fraser.name/news/2018/clock.html
    https://blog.arduino.cc/2018/12/27/draw-on-an-oscilloscope-with-arduino/
 
 Generates analog signals via a low-pass filter of PWM output.
