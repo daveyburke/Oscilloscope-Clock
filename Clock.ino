@@ -47,13 +47,12 @@ void drawRadialLine(float angle, int r1, int r2) {
     drawPoint(sin(2 * PI * angle) * r, cos(2 * PI * angle) * r);
   }
 }
-// Draw arc from angle a1 to a2 (angles measured in turns) with radius r
+
+// Draw arc from angle a1 to a2 with radius r (angles measured in turns)
 void drawArc(float a1, float a2, float r) {
   float dir = a2 > a1 ? .005 : -.005;
   for (float a = a2 > a1 ? a1 : a2; a2 > a1 ? a < a2 : a > a1; a += dir) {
-    int x = sin(2 * PI * a) * r;
-    int y = cos(2 * PI * a) * r;
-    drawPoint(x, y);  
+    drawPoint(sin(2 * PI * a) * r, cos(2 * PI * a) * r);  
   }
 }
 
@@ -81,18 +80,20 @@ void loop() {
   } else {
     gLastButtonState = LOW;
   }
+
+  // Drawing logic. Trick is to draw everything
+  // without "lifting the pen" and ending up in
+  // same spot your started at.
   
   // Second hand out
   float secsAngle = secs / 60.0;
   drawRadialLine(secsAngle, 0, RADIUS);
   
-  // Snap to first tick after second hand
-  float startTickAngle = ceil(secsAngle * 12) / 12.0;
-  
   // Circumference from second hand to first tick
+  float startTickAngle = ceil(secsAngle * 12) / 12.0;
   drawArc(secsAngle, startTickAngle, RADIUS);
   
-  // Ticks and circumference pieces
+  // Ticks and circumference arcs
   for (float i = startTickAngle; i < startTickAngle + 1; i += 1 / 12.0) {
     drawRadialLine(i, RADIUS, RADIUS - 10);
     drawRadialLine(i, RADIUS - 10, RADIUS);
