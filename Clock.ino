@@ -17,7 +17,7 @@
 #define X_PIN 5  
 #define Y_PIN 6 
 #define CLOCK_ADV_PIN 2
-#define DELAY 250
+#define DELAY 80
 
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
@@ -26,7 +26,7 @@
 #define numberOfMinutes(_time_) ((_time_ / SECS_PER_MIN) % SECS_PER_MIN)
 #define numberOfHours(_time_) (( _time_% SECS_PER_DAY) / SECS_PER_HOUR)
 
-#define RADIUS 120.0
+#define RADIUS 125.0
 #define XY_OFFSET RADIUS
 
 long gBootTime = 0;
@@ -40,22 +40,20 @@ void drawPoint(int x, int y) {
   delayMicroseconds(DELAY);
 }
 
-// Draw line from radius r1 to radius r2 (angles measured in turns)
+// Draw line from radius r1 to radius r2 at angle (angles measured in turns)
 void drawRadialLine(float angle, int r1, int r2) {
-  int dir = r1 > r2 ? -4 : 2;
+  int dir = r1 > r2 ? -4 : 4;
   for (int r = r1; r1 > r2 ? r > r2 : r < r2; r += dir) {
     drawPoint(sin(2 * PI * angle) * r, cos(2 * PI * angle) * r);
   }
 }
 // Draw arc from angle a1 to a2 (angles measured in turns) with radius r
 void drawArc(float a1, float a2, float r) {
-  if (a2 < a1) {
-    a2 += 1;
-  }
-  for (float angle = a1; angle < a2; angle += 0.005) {
-    int x = sin(2 * PI * angle) * r;
-    int y = cos(2 * PI * angle) * r;
-    drawPoint(x, y);    
+  float dir = a2 > a1 ? .005 : -.005;
+  for (float a = a2 > a1 ? a1 : a2; a2 > a1 ? a < a2 : a > a1; a += dir) {
+    int x = sin(2 * PI * a) * r;
+    int y = cos(2 * PI * a) * r;
+    drawPoint(x, y);  
   }
 }
 
@@ -77,23 +75,41 @@ void loop() {
   int mins = numberOfMinutes(elapsedSec);
   int secs = numberOfSeconds(elapsedSec);
   
-  // Second hand out, draw clock circle, back to center
-  drawRadialLine(secs / 60.0, 0, RADIUS);
-  drawArc(secs/60.0, (secs / 60.0) + 1, RADIUS);
-  drawRadialLine(secs / 60.0, RADIUS, 0);
-  
-  // Minute hand out/back
-  drawRadialLine(mins / 60.0, 0, RADIUS - 10);
-  drawRadialLine(mins / 60.0, RADIUS - 10, 0);
-  
-  // Hours out/back
-  drawRadialLine(hrs / 12.0, 0, RADIUS - 30);
-  drawRadialLine(hrs / 12.0, RADIUS - 30, 0);
-  
   if (digitalRead(CLOCK_ADV_PIN) == HIGH) {
-    gTimeOffset += (gLastButtonState == LOW) ? SECS_PER_MIN : SECS_PER_MIN * 15;
+    gTimeOffset += (gLastButtonState == LOW) ? SECS_PER_MIN : SECS_PER_MIN * 10;
     gLastButtonState = HIGH;
   } else {
     gLastButtonState = LOW;
   }
+  
+  // Second hand out
+  float secsAngle = secs / 60.0;
+  drawRadialLine(secsAngle, 0, RADIUS);
+  
+  // Snap to first tick after second hand
+  float startTickAngle = ceil(secsAngle * 12) / 12.0;
+  
+  // Circumference from second hand to first tick
+  drawArc(secsAngle, startTickAngle, RADIUS);
+  
+  // Ticks and circumference pieces
+  for (float i = startTickAngle; i < startTickAngle + 1; i += 1 / 12.0) {
+    drawRadialLine(i, RADIUS, RADIUS - 10);
+    drawRadialLine(i, RADIUS - 10, RADIUS);
+    drawArc(i, i + 1 / 12.0, RADIUS);
+  }
+  
+  // Move back to seconds angle and return to (0, 0)
+  drawArc(startTickAngle, secsAngle, RADIUS); 
+  drawRadialLine(secsAngle, RADIUS, 0);
+  
+  // Minute hand out/back
+  float minsAngle = mins / 60.0;
+  drawRadialLine(minsAngle, 0, RADIUS - 10);
+  drawRadialLine(minsAngle, RADIUS - 10, 0);
+  
+  // Hours hand out/back
+  float hrsAngle = hrs / 12.0 + minsAngle / 12.0;
+  drawRadialLine(hrsAngle, 0, RADIUS - 30);
+  drawRadialLine(hrsAngle, RADIUS - 30, 0);
 }
