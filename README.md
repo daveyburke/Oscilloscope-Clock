@@ -13,6 +13,6 @@ DELAY may need to be tuned for your scope (I used a Tektronix TBS 1202B-EDU)
 
 
 
-![Schematic](https://github.com/daveyburke/Oscilloscope-Clock/blob/master/Schematic.jpg)
+![Schematic](https://github.com/daveyburke/Oscilloscope-Clock/blob/master/Schematic.jpg =200x)
 
 TODO: Use an R2R ladder for DAC and a Real-Time Clock to make this better. 
