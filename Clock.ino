@@ -1,5 +1,5 @@
 /*******************************************************************************
-/* Draw clock on an oscilloscope
+/* Draw an analog clock on an oscilloscope
 /* (Dave Burke, 2020)
 /* 
 /* Use an RC LPF on each output (4k / 0.1 uF). XY mode on scope
@@ -29,8 +29,8 @@
 #define RADIUS 125.0
 #define XY_OFFSET RADIUS
 
-long gBootTime = 0;
-long gTimeOffset = 0;
+unsigned long gBootTimeSec = 0;
+unsigned long gTimeOffset = 0;
 int gLastButtonState = LOW;
 
 // Draw a point. Origin at (0, 0), positive values
@@ -52,7 +52,7 @@ void drawRadialLine(float angle, int r1, int r2) {
 void drawArc(float a1, float a2, float r) {
   float dir = a2 > a1 ? .005 : -.005;
   for (float a = a2 > a1 ? a1 : a2; a2 > a1 ? a < a2 : a > a1; a += dir) {
-    drawPoint(sin(2 * PI * a) * r, cos(2 * PI * a) * r);  
+    drawPoint(sin(2 * PI * a) * r, cos(2 * PI * a) * r);
   }
 }
 
@@ -65,11 +65,11 @@ void setup() {
   // https://playground.arduino.cc/Main/TimerPWMCheatsheet/
   TCCR0B = (TCCR0B & 0b11111000) | 0x01;
   
-  gBootTime = millis();
+  gBootTimeSec = millis() / 64000UL; // adjusted for timer change
 }
 
 void loop() {
-  long elapsedSec = gTimeOffset + (millis() - gBootTime) / 64000; // adjusted for timer change
+  unsigned long elapsedSec = millis() / 64000UL - gBootTimeSec + gTimeOffset;
   int hrs = numberOfHours(elapsedSec);
   int mins = numberOfMinutes(elapsedSec);
   int secs = numberOfSeconds(elapsedSec);
@@ -80,10 +80,10 @@ void loop() {
   } else {
     gLastButtonState = LOW;
   }
-
+  
   // Drawing logic. Trick is to draw everything
-  // without "lifting the pen" and ending up in
-  // same spot your started at.
+  // without "lifting the pen" and end up in
+  // the same spot your started from
   
   // Second hand out
   float secsAngle = secs / 60.0;
