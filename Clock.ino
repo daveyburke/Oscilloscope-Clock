@@ -33,6 +33,22 @@ unsigned long gBootTimeSec = 0;
 unsigned long gTimeOffset = 0;
 int gLastButtonState = LOW;
 
+unsigned long seconds() {
+  // millis() rolls at approximately 50 days, but we run the timer faster
+  // so happens quickly. Approximate a monotonic second counter.
+  
+  unsigned long timeSec = millis() / 64000UL;  // adjusted for timer change
+  static unsigned long lastTimeSec = 0;
+  static unsigned long carryOverSec = 0;
+
+  if (timeSec < lastTimeSec) {
+    carryOverSec += lastTimeSec;
+  }
+  lastTimeSec = timeSec;
+
+  return timeSec + carryOverSec;
+}
+
 // Draw a point. Origin at (0, 0), positive values
 void drawPoint(int x, int y) {
   analogWrite(X_PIN, x + XY_OFFSET); 
@@ -61,15 +77,15 @@ void setup() {
   pinMode(Y_PIN, OUTPUT);
   pinMode(CLOCK_ADV_PIN, INPUT);
 
-  // Adjust PWM for pins 5, 6 to 62500 hz. This will affect millis() by a factor of 64
+  // Adjust PWM for pins 5, 6 to 62500 Hz. This will affect millis() by a factor of 64
   // https://playground.arduino.cc/Main/TimerPWMCheatsheet/
   TCCR0B = (TCCR0B & 0b11111000) | 0x01;
   
-  gBootTimeSec = millis() / 64000UL; // adjusted for timer change
+  gBootTimeSec = seconds();
 }
 
 void loop() {
-  unsigned long elapsedSec = millis() / 64000UL - gBootTimeSec + gTimeOffset;
+  unsigned long elapsedSec = seconds() - gBootTimeSec + gTimeOffset;
   int hrs = numberOfHours(elapsedSec);
   int mins = numberOfMinutes(elapsedSec);
   int secs = numberOfSeconds(elapsedSec);
