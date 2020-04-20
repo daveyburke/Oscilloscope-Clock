@@ -33,20 +33,13 @@ unsigned long gBootTimeSec = 0;
 unsigned long gTimeOffset = 0;
 int gLastButtonState = LOW;
 
-unsigned long seconds() {
-  // millis() rolls at approximately 50 days, but we run the timer faster
-  // so happens quickly. Approximate a monotonic second counter.
-  
-  unsigned long timeSec = millis() / 64000UL;  // adjusted for timer change
-  static unsigned long lastTimeSec = 0;
-  static unsigned long carryOverSec = 0;
-
-  if (timeSec < lastTimeSec) {
-    carryOverSec += lastTimeSec;
-  }
-  lastTimeSec = timeSec;
-
-  return timeSec + carryOverSec;
+// 64-bit millis() to work around rollover (happens ~daily due to faster timer)
+uint64_t millis64() {
+  static uint32_t low32, high32; 
+  uint32_t newLow32 = millis();
+  if (newLow32 < low32) high32++; 
+  low32 = newLow32;
+  return (uint64_t) high32 << 32 | low32;
 }
 
 // Draw a point. Origin at (0, 0), positive values
@@ -81,11 +74,11 @@ void setup() {
   // https://playground.arduino.cc/Main/TimerPWMCheatsheet/
   TCCR0B = (TCCR0B & 0b11111000) | 0x01;
   
-  gBootTimeSec = seconds();
+  gBootTimeSec = millis64() / 64000UL;  // adjusted for faster timer
 }
 
 void loop() {
-  unsigned long elapsedSec = seconds() - gBootTimeSec + gTimeOffset;
+  unsigned long elapsedSec = millis64() / 64000UL - gBootTimeSec + gTimeOffset;
   int hrs = numberOfHours(elapsedSec);
   int mins = numberOfMinutes(elapsedSec);
   int secs = numberOfSeconds(elapsedSec);
@@ -99,7 +92,7 @@ void loop() {
   
   // Drawing logic. Trick is to draw everything
   // without "lifting the pen" and end up in
-  // the same spot your started from
+  // the same spot you started from.
   
   // Second hand out
   float secsAngle = secs / 60.0;
