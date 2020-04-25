@@ -5,19 +5,30 @@
 /* Use an RC LPF on each output (4k / 0.1 uF). XY mode on scope
 /* Connect pin 2 with pull down resistor to ground and pulse with 5V to set time
 /*
+/* Define RTC for optional DS32321 real-time clock for accurate time keeping.
+/* Wire to SDA, SCL lines. Without RTC, clock is accurate to ~1 min / day.
+/*
 /* Inspired by:
 /*   https://neil.fraser.name/news/2018/clock.html 
 /*   https://blog.arduino.cc/2018/12/27/draw-on-an-oscilloscope-with-arduino/
 /*
 /* DELAY may need to be tuned for your scope
 /*
-/* TODO: Use an R2R ladder for DAC and a Real-Time Clock
+/* TODO: Use an R2R ladder for DAC
 /* *****************************************************************************/
+
+#include <Wire.h>
+#include <DS3231.h>
+
+#define RTC  // define for optional DS3231 real-time clock
 
 #define X_PIN 5  
 #define Y_PIN 6 
 #define CLOCK_ADV_PIN 2
 #define DELAY 80
+
+#define RADIUS 125.0
+#define XY_OFFSET RADIUS
 
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
@@ -26,12 +37,10 @@
 #define numberOfMinutes(_time_) ((_time_ / SECS_PER_MIN) % SECS_PER_MIN)
 #define numberOfHours(_time_) (( _time_% SECS_PER_DAY) / SECS_PER_HOUR)
 
-#define RADIUS 125.0
-#define XY_OFFSET RADIUS
-
+int gLastButtonState = LOW;
 unsigned long gBootTimeSec = 0;
 unsigned long gTimeOffset = 0;
-int gLastButtonState = LOW;
+DS3231 gRtc;
 
 // 64-bit millis() to work around rollover (happens ~daily due to faster timer)
 uint64_t millis64() {
@@ -40,6 +49,24 @@ uint64_t millis64() {
   if (newLow32 < low32) high32++; 
   low32 = newLow32;
   return (uint64_t) high32 << 32 | low32;
+}
+
+void setRtcTime(int year, int month, int date, int hour, int minute, int second) {
+  gRtc.setYear(year);
+  gRtc.setMonth(month);
+  gRtc.setDate(date);
+  gRtc.setHour(hour);
+  gRtc.setMinute(minute);
+  gRtc.setSecond(second);
+}
+
+void advanceRtcTime(int mins) {
+  bool h12, pm;
+  int newMins = gRtc.getMinute() + mins;
+  int newHours = gRtc.getHour(h12, pm) + (newMins >= 60 ? 1 : 0);
+  gRtc.setSecond(0);
+  gRtc.setMinute(newMins % 60);
+  gRtc.setHour(newHours % 12);
 }
 
 // Draw a point. Origin at (0, 0), positive values
@@ -73,18 +100,35 @@ void setup() {
   // Adjust PWM for pins 5, 6 to 62500 Hz. This will affect millis() by a factor of 64
   // https://playground.arduino.cc/Main/TimerPWMCheatsheet/
   TCCR0B = (TCCR0B & 0b11111000) | 0x01;
-  
+
+#ifdef RTC
+  Wire.begin();
+  Serial.begin(9600);
+  //setRtcTime(2020, 4, 25, 12, 0, 0);
+#else
   gBootTimeSec = millis64() / 64000UL;  // adjusted for faster timer
+#endif
 }
 
 void loop() {
+#ifdef RTC
+  bool h12, pm;  
+  int hrs = gRtc.getHour(h12, pm);
+  int mins = gRtc.getMinute();
+  int secs = gRtc.getSecond();
+#else
   unsigned long elapsedSec = millis64() / 64000UL - gBootTimeSec + gTimeOffset;
   int hrs = numberOfHours(elapsedSec);
   int mins = numberOfMinutes(elapsedSec);
   int secs = numberOfSeconds(elapsedSec);
-  
+#endif
+
   if (digitalRead(CLOCK_ADV_PIN) == HIGH) {
+#ifdef RTC
+    advanceRtcTime((gLastButtonState == LOW) ? 1 : 10);
+#else
     gTimeOffset += (gLastButtonState == LOW) ? SECS_PER_MIN : SECS_PER_MIN * 10;
+#endif
     gLastButtonState = HIGH;
   } else {
     gLastButtonState = LOW;
