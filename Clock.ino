@@ -146,8 +146,8 @@ void loop() {
     // Tick marks
     for (int i = secs; i < secs + 60; i++) {
         float a = i / 60.0;
-        drawRadialLine(a, RADIUS, RADIUS - (i % 5 == 0 ? 30 : 5));  // long ticks for hours
-        drawRadialLine(a, RADIUS - (i % 5 == 0 ? 30 : 5), RADIUS);
+        drawRadialLine(a, RADIUS, RADIUS - (i % 5 == 0 ? 30 : 10));  // long ticks for hours
+        drawRadialLine(a, RADIUS - (i % 5 == 0 ? 30 : 10), RADIUS);
         drawArc(a, a + 1 / 60.0, RADIUS);
     }
     drawRadialLine(secsAngle, RADIUS, 0);
