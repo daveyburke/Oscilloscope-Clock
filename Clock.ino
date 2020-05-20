@@ -25,7 +25,7 @@
 #define X_PIN 5  
 #define Y_PIN 6 
 #define CLOCK_ADV_PIN 2
-#define DELAY 80
+#define DELAY 30
 
 #define RADIUS 125.0
 #define XY_OFFSET RADIUS
@@ -48,7 +48,7 @@ uint64_t millis64() {
     uint32_t newLow32 = millis();
     if (newLow32 < low32) high32++; 
     low32 = newLow32;
-    return (uint64_t) high32 << 32 | low32;
+    return ((uint64_t) high32 << 32 | low32) / 64UL;
 }
 
 void setRtcTime(int year, int month, int date, int hour, int minute, int second) {
@@ -106,18 +106,18 @@ void setup() {
     Serial.begin(9600);
     //setRtcTime(2020, 4, 25, 12, 0, 0);
 #else
-    gBootTimeSec = millis64() / 64000UL;  // adjusted for faster timer
+    gBootTimeSec = millis64() / 1000UL;  // adjusted for faster timer
 #endif
 }
 
-void loop() {
+void loop() {  
 #ifdef RTC
     bool h12, pm;  
     int hrs = gRtc.getHour(h12, pm);
     int mins = gRtc.getMinute();
     int secs = gRtc.getSecond();
 #else
-    unsigned long elapsedSec = millis64() / 64000UL - gBootTimeSec + gTimeOffset;
+    unsigned long elapsedSec = millis64() / 1000UL - gBootTimeSec + gTimeOffset;
     int hrs = numberOfHours(elapsedSec);
     int mins = numberOfMinutes(elapsedSec);
     int secs = numberOfSeconds(elapsedSec);
@@ -138,32 +138,29 @@ void loop() {
     // without "lifting the pen" and end up in
     // the same spot you started from.
   
-    // Second hand out
+    // Second hand
     float secsAngle = secs / 60.0;
+    drawRadialLine(secsAngle + 0.5, 0, 30);  // reverse part of hand
     drawRadialLine(secsAngle, 0, RADIUS);
-  
-    // Circumference from second hand to first tick
-    float startTickAngle = ceil(secsAngle * 12) / 12.0;
-    drawArc(secsAngle, startTickAngle, RADIUS);
-  
-    // Ticks and circumference arcs
-    for (float i = startTickAngle; i < startTickAngle + 1; i += 1 / 12.0) {
-        drawRadialLine(i, RADIUS, RADIUS - 10);
-        drawRadialLine(i, RADIUS - 10, RADIUS);
-        drawArc(i, i + 1 / 12.0, RADIUS);
+    
+    // Tick marks
+    for (int i = secs; i < secs + 60; i++) {
+        float a = i / 60.0;
+        drawRadialLine(a, RADIUS, RADIUS - (i % 5 == 0 ? 30 : 5));  // long ticks for hours
+        drawRadialLine(a, RADIUS - (i % 5 == 0 ? 30 : 5), RADIUS);
+        drawArc(a, a + 1 / 60.0, RADIUS);
     }
-  
-    // Move back to seconds angle and return to (0, 0)
-    drawArc(startTickAngle, secsAngle, RADIUS); 
     drawRadialLine(secsAngle, RADIUS, 0);
-  
+      
     // Minute hand out/back
     float minsAngle = mins / 60.0;
+    drawRadialLine(minsAngle + 0.5, 0, 30);
     drawRadialLine(minsAngle, 0, RADIUS - 10);
     drawRadialLine(minsAngle, RADIUS - 10, 0);
   
     // Hours hand out/back
     float hrsAngle = hrs / 12.0 + minsAngle / 12.0;
-    drawRadialLine(hrsAngle, 0, RADIUS - 30);
-    drawRadialLine(hrsAngle, RADIUS - 30, 0);
+    drawRadialLine(hrsAngle + 0.5, 0, 30);
+    drawRadialLine(hrsAngle, 0, RADIUS - 45);
+    drawRadialLine(hrsAngle, RADIUS - 45, 0);
 }
