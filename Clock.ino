@@ -25,7 +25,7 @@
 #define X_PIN 5  
 #define Y_PIN 6 
 #define CLOCK_ADV_PIN 2
-#define DELAY 30
+#define DELAY 80
 
 #define RADIUS 125.0
 #define XY_OFFSET RADIUS
@@ -78,7 +78,7 @@ void drawPoint(int x, int y) {
 
 // Draw line from radius r1 to radius r2 at angle (angles measured in turns)
 void drawRadialLine(float angle, int r1, int r2) {
-    int dir = r1 > r2 ? -4 : 4;
+    int dir = r1 > r2 ? -5 : 5;
     for (int r = r1; r1 > r2 ? r > r2 : r < r2; r += dir) {
         drawPoint(sin(2 * PI * angle) * r, cos(2 * PI * angle) * r);
     }
@@ -146,12 +146,14 @@ void loop() {
     // Tick marks
     for (int i = secs; i < secs + 60; i++) {
         float a = i / 60.0;
-        drawRadialLine(a, RADIUS, RADIUS - (i % 5 == 0 ? 30 : 10));  // long ticks for hours
-        drawRadialLine(a, RADIUS - (i % 5 == 0 ? 30 : 10), RADIUS);
+        if (i % 5 == 0) {
+            drawRadialLine(a, RADIUS, RADIUS - 20);
+            drawRadialLine(a, RADIUS - 20, RADIUS);
+        }
         drawArc(a, a + 1 / 60.0, RADIUS);
     }
     drawRadialLine(secsAngle, RADIUS, 0);
-      
+    
     // Minute hand out/back
     float minsAngle = mins / 60.0;
     drawRadialLine(minsAngle + 0.5, 0, 30);
